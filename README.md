@@ -1,262 +1,179 @@
-﻿
----
+﻿# @selestra11/react.table
 
-### 💾 Download This README.md
-
-To **download this as a file**, run this in your browser’s console (F12 → Console):
-
-```js
-(() => {
-  const readme = `# Leximo Table 🪄
-
-A customizable, feature-rich **React table component** with inline editing, persistence (localStorage or backend), and Bootstrap 5 support. Perfect for admin panels, dashboards, and data-heavy UIs.
-
-✨ **Fully editable** | 💾 **Local & API storage** | 🧩 **Custom actions** | 📢 **Toast feedback**
+A fully customizable, editable, and paginated data table component for React — powered by Bootstrap and Font Awesome. Includes support for local and remote data sources via simple hook implementations.
 
 ---
 
-## 🚀 Features
+## ✨ Features
 
-- ✅ **Inline Editing** – Click to edit text, checkboxes, and select fields
-- ✅ **Add, Edit, Delete Rows** – Full CRUD support
-- ✅ **Two Storage Options**:
-  - \`LocalTableProvider\` – Uses \`localStorage\`
-  - \`BackendTableProvider\` – Connects to REST API
-- ✅ **Custom Row Actions** – Add buttons like "Star", "Clone", "Export"
-- ✅ **Toast Notifications** – Built-in feedback for user actions
-- ✅ **Bootstrap 5 Compatible** – Clean, responsive design
-- ✅ **Font Awesome 6 (for icons)** – Edit, delete, custom actions
-- ✅ **Extensible** – Extend \`BaseTableProvider\` for custom backends
-- ✅ **Single Import** – All components and hooks from one package
+- Add, edit, delete, and paginate rows
+- Use checkboxes, selects, and text inputs
+- Toast notifications for actions
+- Persist data with custom or built-in hooks (e.g., localStorage)
+- Bootstrap + Font Awesome compatible
 
 ---
 
 ## 📦 Installation
 
-\`\`\`bash
-npm install leximo-table
-\`\`\`
+```bash
+npm install @selestra11/react.table
+```
 
 ---
 
-## 🧰 Requirements
+## 🔧 Peer Dependencies
 
-Include these in your \`index.html\` or layout:
+Make sure you include these in your project:
 
-\`\`\`html
-<!-- Bootstrap 5 -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+```bash
+npm install bootstrap @fortawesome/fontawesome-free
+```
 
-<!-- Font Awesome 6 (for icons) -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-\`\`\`
+In your main `index.js` or `App.js`:
 
-> 💡 Tip: You can use your own CDN or local copies.
+```js
+import 'bootstrap/dist/css/bootstrap.min.css';
+import '@fortawesome/fontawesome-free/css/all.min.css';
+```
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Using Local Storage (Simple)
+### 1. Define headers
 
-\`\`\`jsx
-import { Table, LocalTableProvider } from "leximo-table";
-
-const headers = [
-  { name: "Title", field: "title", type: "text" },
-  { name: "Published", field: "published", type: "checkbox" },
-  { name: "Category", field: "category", type: "select", options: ["News", "Blog", "Tutorial"] },
-];
-
-function App() {
-  return (
-    <LocalTableProvider localStorageKey="blog-posts">
-      <Table headers={headers} />
-    </LocalTableProvider>
-  );
-}
-\`\`\`
-
-### 2. Using Backend API (Advanced)
-
-\`\`\`jsx
-import { Table, BackendTableProvider } from "leximo-table";
-
+```js
 const headers = [
   { name: "Name", field: "name", type: "text" },
-  { name: "Active", field: "active", type: "checkbox" },
+  { name: "Age", field: "age", type: "text" },
+  { name: "Is Active", field: "isActive", type: "checkbox" },
   { name: "Role", field: "role", type: "select", options: ["Admin", "User", "Guest"] },
 ];
+```
 
-function App() {
-  return (
-    <BackendTableProvider apiUrl="https://api.example.com/users">
-      <Table headers={headers} />
-    </BackendTableProvider>
-  );
-}
-\`\`\`
+### 2. Use a hook (local or custom)
 
----
+```js
+import { useLocalTable } from '@selestra11/react.table';
 
-## 🧩 Header Configuration
+const table = useLocalTable({
+  localStorageKey: "my-table",
+  initialData: [
+    { name: "Alice", age: "25", isActive: true, role: "Admin" },
+    { name: "Bob", age: "30", isActive: false, role: "User" },
+  ],
+});
+```
 
-Each column is defined by a header object:
+### 3. Render the table
 
-\`\`\`js
-{
-  name: "Display Name",       // Column header label
-  field: "dataKey",           // Key in your data object
-  type: "text" | "checkbox" | "select",
-  options?: ["Option1", ...]  // Required only for 'select'
-}
-\`\`\`
+```js
+import { Table } from '@selestra11/react.table';
 
-Example:
-\`\`\`js
-const headers = [
-  { name: "Product", field: "name", type: "text" },
-  { name: "In Stock", field: "inStock", type: "checkbox" },
-  { name: "Category", field: "category", type: "select", options: ["Electronics", "Books", "Clothing"] }
-];
-\`\`\`
+<Table headers={headers} table={table} />;
+```
 
 ---
 
-## 🎯 Custom Actions
+## 🛠️ API
 
-Add custom buttons to each row:
+### 🔹 `headers`
 
-\`\`\`js
-const customActions = [
-  {
-    icon: "fas fa-star text-warning",
-    title: "Mark Important",
-    onClick: (row, helpers) => {
-      alert(\`Marked "\${row.name}" as important!\`);
-    }
-  },
-  {
-    icon: "fas fa-clone text-info",
-    title: "Duplicate",
-    onClick: (row, helpers) => {
-      helpers.addNewRow({ ...row, id: Date.now(), name: \`Copy of \${row.name}\` });
-    }
-  }
-];
-\`\`\`
+Each column in the table is defined by a header object:
 
-Use it with your provider:
+| Field   | Type       | Required | Description |
+|---------|------------|----------|-------------|
+| name    | `string`   | ✅        | Display name |
+| field   | `string`   | ✅        | Field name in row data |
+| type    | `string`   | ✅        | One of: `"text"`, `"checkbox"`, `"select"` |
+| options | `string[]` | ❌       | Required if `type === "select"` |
 
-\`\`\`jsx
-<LocalTableProvider localStorageKey="items" customActions={customActions}>
-  <Table headers={headers} />
-</LocalTableProvider>
-\`\`\`
+---
 
-> \`helpers\` includes: \`addNewRow\`, \`updateRow\`, \`deleteRow\`, etc.
+### 🔹 `useLocalTable(options)`
+
+A hook that saves data in `localStorage`.
+
+```js
+useLocalTable({
+  localStorageKey: "key",     // unique key to store in localStorage
+  initialData: [...],         // initial rows
+  customActions: [            // optional custom icons
+    {
+      icon: "fas fa-eye",
+      title: "Preview",
+      onClick: (row, table) => alert(JSON.stringify(row, null, 2)),
+    },
+  ],
+});
+```
+
+---
+
+## 🧩 Custom Hooks (Advanced)
+
+You can create your own hook by reusing the built-in logic:
+
+```js
+import { useBaseTable } from '@selestra11/react.table';
+
+export function useRemoteTable() {
+  return useBaseTable({
+    initialData: [],
+    onAddRow: async (row) => { ... },
+    onUpdateRow: async (row) => { ... },
+    onDeleteRow: async (id) => { ... },
+    customActions: [...]
+  });
+}
+```
 
 ---
 
 ## 🔔 Toast Notifications
 
-Built-in toast messages for:
-- Row added
-- Row updated
-- Row deleted
-- Errors (e.g., edit conflict)
-
-Uses \`ToastManager\` — no setup needed!
-
-Example message:
-> "Please save or cancel the current row before adding a new one." ⚠️
+This package uses a built-in `ToastManager` that you can customize. It shows `success`, `danger`, or `warning` messages for table operations.
 
 ---
 
-## 🔧 Advanced: Extend BaseTableProvider
+## 📦 Components
 
-Create your own storage logic:
+### `<Table headers={headers} table={table} />`
 
-\`\`\`js
-import { BaseTableProvider } from "leximo-table";
+Renders the full table with editable fields, buttons, pagination, and actions.
 
-function CustomTableProvider({ children, syncUrl }) {
-  const handleAddRow = async (row) => {
-    const res = await fetch(syncUrl, { method: "POST", body: JSON.stringify(row) });
-    return res.ok ? { ok: true, id: await res.json().id } : { ok: false };
-  };
+---
 
-  return (
-    <BaseTableProvider
-      initialData={[]}
-      onAddRow={handleAddRow}
-      onUpdateRow={/*...*/}
-      onDeleteRow={/*...*/}
-    >
-      {children}
-    </BaseTableProvider>
-  );
+## 🧪 Example Integration
+
+```js
+import React from 'react';
+import { Table, useLocalTable } from '@selestra11/react.table';
+
+const headers = [
+  { name: "Full Name", field: "name", type: "text" },
+  { name: "Subscribed", field: "subscribed", type: "checkbox" },
+  { name: "Plan", field: "plan", type: "select", options: ["Free", "Pro", "Enterprise"] },
+];
+
+const initialData = [
+  { name: "John Doe", subscribed: true, plan: "Pro" },
+  { name: "Jane Smith", subscribed: false, plan: "Free" },
+];
+
+export default function App() {
+  const table = useLocalTable({
+    localStorageKey: "subscription-users",
+    initialData,
+  });
+
+  return <Table headers={headers} table={table} />;
 }
-\`\`\`
+```
 
 ---
 
-## 🎨 Styling & Design
+## 🧑‍💻 License
 
-- Uses **Bootstrap 5** classes for layout and responsiveness
-- Supports dark mode via Bootstrap
-- Icons from **Font Awesome 6**
-- Inline inputs styled to match native form controls
-
-> No additional CSS required!
-
----
-
-## ⚠️ Notes & Best Practices
-
-- Only **one row can be edited at a time** – enforced by the component
-- Use \`useMemo\` for \`headers\` and \`customActions\` to prevent unnecessary re-renders
-- For backend mode, ensure your API returns \`{ ok: true, id?: newId }\` on POST
-- Clear localStorage with \`localStorage.removeItem("your-key")\` during dev
-
----
-
-## 📦 Exports
-
-All features available from one import:
-
-\`\`\`js
-import {
-  Table,
-  useTable,
-  BaseTableProvider,
-  LocalTableProvider,
-  BackendTableProvider
-} from "leximo-table";
-\`\`\`
-
----
-
-## 🤝 Contributing
-
-Open to improvements! Feel free to:
-- Report bugs
-- Suggest features
-- Submit PRs for new cell types (e.g., date, number)
-- Add support for pagination, sorting, filtering
-
----
-
-## 📄 License
-
-MIT – Free for personal and commercial use.
-`;
-
-  const blob = new Blob([readme], { type: 'text/markdown' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'README.md';
-  a.click();
-  URL.revokeObjectURL(url);
-})();
+MIT © [Selestra](https://github.com/selestra11)
