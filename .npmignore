@@ -1,0 +1,12 @@
+.vs/
+.vscode/
+node_modules/
+*.log
+*.tmp
+*.swp
+dist/*.map
+src/
+vite.config.js
+*.ts
+*.tsx
+*.jsx

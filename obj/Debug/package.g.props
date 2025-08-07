@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <PackageJsonName Condition="$(PackageJsonName) == ''">@selestra11/react.table</PackageJsonName>
+    <PackageJsonVersion Condition="$(PackageJsonVersion) == ''">0.0.4</PackageJsonVersion>
+    <PackageJsonMain Condition="$(PackageJsonMain) == ''">dist/react.table.umd.js</PackageJsonMain>
+    <PackageJsonModule Condition="$(PackageJsonModule) == ''">dist/react.table.es.js</PackageJsonModule>
+    <PackageJsonPeerdependenciesReact Condition="$(PackageJsonPeerdependenciesReact) == ''">&gt;=19.0.0 &lt;20.0.0</PackageJsonPeerdependenciesReact>
+    <PackageJsonPeerdependenciesReactDom Condition="$(PackageJsonPeerdependenciesReactDom) == ''">&gt;=19.0.0 &lt;20.0.0</PackageJsonPeerdependenciesReactDom>
+    <PackageJsonScriptsDev Condition="$(PackageJsonScriptsDev) == ''">vite</PackageJsonScriptsDev>
+    <PackageJsonScriptsBuild Condition="$(PackageJsonScriptsBuild) == ''">vite build</PackageJsonScriptsBuild>
+    <PackageJsonScriptsPreview Condition="$(PackageJsonScriptsPreview) == ''">vite preview</PackageJsonScriptsPreview>
+    <PackageJsonFiles Condition="$(PackageJsonFiles) == ''">[
+  "dist/",
+  "README.md"
+]</PackageJsonFiles>
+    <PackageJsonDevdependenciesVitejsPluginReact Condition="$(PackageJsonDevdependenciesVitejsPluginReact) == ''">^4.7.0</PackageJsonDevdependenciesVitejsPluginReact>
+    <PackageJsonDevdependenciesVite Condition="$(PackageJsonDevdependenciesVite) == ''">^7.0.5</PackageJsonDevdependenciesVite>
+    <PackageJsonRepositoryType Condition="$(PackageJsonRepositoryType) == ''">git</PackageJsonRepositoryType>
+    <PackageJsonRepositoryUrl Condition="$(PackageJsonRepositoryUrl) == ''">git+https://github.com/ademirtug/react.table.git</PackageJsonRepositoryUrl>
+  </PropertyGroup>
+</Project>
