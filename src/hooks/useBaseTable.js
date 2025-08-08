@@ -1,4 +1,4 @@
-// hooks/useBaseTable.js
+﻿// hooks/useBaseTable.js
 import { useState, useEffect } from "react";
 import ToastManager from '../utils/toastManager';
 
@@ -28,28 +28,26 @@ export function useBaseTable({
         setNextId(maxId + 1);
     }, [initialData]);
 
-    // Add a new empty row
     const addNewRow = (headers) => {
         if (!Array.isArray(headers)) {
             ToastManager.addToast("Headers must be an array", "danger");
-            console.error("Expected headers array, got:", headers);
             return false;
         }
 
         const editingExists = tableData.some(row => row.isEditing);
         if (editingExists) {
-            ToastManager.addToast("Please save or cancel the current row before adding a new one.", "warning");
+            ToastManager.addToast("Please save or cancel the current edit before adding a new one.", "warning");
             return false;
         }
 
         const newRow = { id: nextId, isEditing: true, isNew: true };
         headers.forEach(header => {
-            if (!header.field) {
-                console.warn("Header missing 'field':", header);
-                return;
-            }
-            newRow[header.field] = header.type === "checkbox" ? false
-                : header.type === "select" ? (header.options?.[0] || "") : "";
+            if (!header.field) return;
+            newRow[header.field] = header.type === "checkbox"
+                ? false
+                : header.type === "select" && header.options?.length
+                    ? header.options[0]
+                    : "";
         });
 
         setTableData(prev => [...prev, newRow]);
@@ -57,7 +55,6 @@ export function useBaseTable({
         return true;
     };
 
-    // Toggle edit mode with conflict check
     const toggleEditMode = (id) => {
         const editingExists = tableData.some(row => row.isEditing && row.id !== id);
         if (editingExists) {
@@ -67,15 +64,12 @@ export function useBaseTable({
 
         setTableData(prev => prev.map(row => {
             if (row.id === id) {
-                // Entering edit mode: save original
                 if (!row.isEditing) {
                     setOriginalValues(prevValues => ({
                         ...prevValues,
                         [id]: { ...row }
                     }));
-                }
-                // Canceling edit: restore original
-                else if (originalValues[id]) {
+                } else if (originalValues[id]) {
                     return { ...originalValues[id], isEditing: false };
                 }
                 return { ...row, isEditing: !row.isEditing };
@@ -84,14 +78,12 @@ export function useBaseTable({
         }));
     };
 
-    // Handle input change
     const handleChange = (id, field, value) => {
         setTableData(prev => prev.map(row =>
             row.id === id ? { ...row, [field]: value } : row
         ));
     };
 
-    // Save new row
     const addRow = async (row) => {
         if (!onAddRow) {
             ToastManager.addToast("Add functionality not configured.", "danger");
@@ -114,7 +106,6 @@ export function useBaseTable({
         return response;
     };
 
-    // Update existing row
     const updateExistingRow = async (row) => {
         if (!onUpdateRow) {
             ToastManager.addToast("Update functionality not configured.", "danger");
@@ -137,26 +128,33 @@ export function useBaseTable({
         return response;
     };
 
-    // Main save function
     const updateRow = async (row) => {
         return row.isNew ? await addRow(row) : await updateExistingRow(row);
     };
 
-    // Delete row
+    // ✅ Fixed: Only call backend delete for existing rows
     const deleteRow = async (id) => {
+        const row = tableData.find(r => r.id === id);
+        if (!row) return { ok: true };
+
+        if (row.isNew) {
+            // Just remove locally — never saved to backend
+            setTableData(prev => prev.filter(r => r.id !== id));
+            return { ok: true };
+        }
+
         if (typeof onDeleteRow === "function") {
             const result = await onDeleteRow(id);
             if (!result.ok) {
-                ToastManager.addToast(result.message || "Failed to delete from storage", "danger");
+                ToastManager.addToast(result.message || "Failed to delete", "danger");
                 return result;
             }
         }
 
-        setTableData(prev => prev.filter(row => row.id !== id));
+        setTableData(prev => prev.filter(r => r.id !== id));
         return { ok: true };
     };
 
-    // Return all values and functions
     return {
         tableData,
         toggleEditMode,
