@@ -7,13 +7,15 @@ export function useBaseTable({
     onAddRow = null,
     onUpdateRow = null,
     onDeleteRow = null,
-    customActions = []
+    headers = [],
+    customActions = [],
+    customButtons = []
 }) {
     const [tableData, setTableData] = useState([]);
     const [nextId, setNextId] = useState(1);
     const [originalValues, setOriginalValues] = useState({});
 
-    // Initialize data and assign IDs
+    // Initialize data
     useEffect(() => {
         let maxId = 0;
         const transformedData = initialData.map(row => {
@@ -28,12 +30,7 @@ export function useBaseTable({
         setNextId(maxId + 1);
     }, [initialData]);
 
-    const addNewRow = (headers) => {
-        if (!Array.isArray(headers)) {
-            ToastManager.addToast("Headers must be an array", "danger");
-            return false;
-        }
-
+    const addNewRow = () => {
         const editingExists = tableData.some(row => row.isEditing);
         if (editingExists) {
             ToastManager.addToast("Please save or cancel the current edit before adding a new one.", "warning");
@@ -56,26 +53,30 @@ export function useBaseTable({
     };
 
     const toggleEditMode = (id) => {
+        // Check if another row is already being edited
         const editingExists = tableData.some(row => row.isEditing && row.id !== id);
         if (editingExists) {
             ToastManager.addToast("Please save or cancel the current edit before editing another row.", "warning");
             return;
         }
 
-        setTableData(prev => prev.map(row => {
-            if (row.id === id) {
-                if (!row.isEditing) {
-                    setOriginalValues(prevValues => ({
-                        ...prevValues,
-                        [id]: { ...row }
-                    }));
-                } else if (originalValues[id]) {
-                    return { ...originalValues[id], isEditing: false };
-                }
-                return { ...row, isEditing: !row.isEditing };
+        // Toggle the edit mode for the specified row
+        setTableData(prev => prev.map(row =>
+            row.id === id
+                ? { ...row, isEditing: !row.isEditing }
+                : row
+        ));
+
+        // Store original values when entering edit mode
+        if (!originalValues[id]) {
+            const row = tableData.find(r => r.id === id);
+            if (row) {
+                setOriginalValues(prev => ({
+                    ...prev,
+                    [id]: { ...row }
+                }));
             }
-            return { ...row, isEditing: false };
-        }));
+        }
     };
 
     const handleChange = (id, field, value) => {
@@ -85,19 +86,17 @@ export function useBaseTable({
     };
 
     const addRow = async (row) => {
-        if (!onAddRow) {
-            ToastManager.addToast("Add functionality not configured.", "danger");
-            return { ok: false };
-        }
-
-        const { isNew, isEditing, ...dataToSave } = row;
+        const { ...dataToSave } = row;
         const response = await onAddRow(dataToSave);
 
         if (response.ok) {
             setTableData(prev =>
                 prev.map(r =>
                     r.id === row.id
-                        ? { ...dataToSave, id: response.id || row.id, isEditing: false }
+                        ? {
+                            ...response.row,
+                            isEditing: false
+                        }
                         : r
                 )
             );
@@ -107,12 +106,7 @@ export function useBaseTable({
     };
 
     const updateExistingRow = async (row) => {
-        if (!onUpdateRow) {
-            ToastManager.addToast("Update functionality not configured.", "danger");
-            return { ok: false };
-        }
-
-        const { isNew, isEditing, ...dataToSave } = row;
+        const { ...dataToSave } = row;
         const response = await onUpdateRow(dataToSave);
 
         if (response.ok) {
@@ -132,13 +126,11 @@ export function useBaseTable({
         return row.isNew ? await addRow(row) : await updateExistingRow(row);
     };
 
-    // ✅ Fixed: Only call backend delete for existing rows
     const deleteRow = async (id) => {
         const row = tableData.find(r => r.id === id);
         if (!row) return { ok: true };
 
         if (row.isNew) {
-            // Just remove locally — never saved to backend
             setTableData(prev => prev.filter(r => r.id !== id));
             return { ok: true };
         }
@@ -162,6 +154,8 @@ export function useBaseTable({
         updateRow,
         deleteRow,
         addNewRow,
-        customActions
+        headers,
+        customActions,
+        customButtons
     };
 }

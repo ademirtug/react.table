@@ -5,7 +5,8 @@ import { useBaseTable } from "./useBaseTable";
 export function useLocalTable({
     localStorageKey,
     initialData = [],
-    customActions = []
+    customActions = [],
+    customButtons = []
 }) {
     const [loadedData, setLoadedData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -80,7 +81,8 @@ export function useLocalTable({
         onAddRow: handleAddRow,
         onUpdateRow: handleUpdateRow,
         onDeleteRow: handleDeleteRow,
-        customActions
+        customActions,
+        customButtons
     });
 
     return {

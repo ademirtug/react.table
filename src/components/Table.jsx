@@ -1,17 +1,16 @@
-﻿import { useState } from "react";
+﻿import { useState, useEffect } from "react";
 import ToastManager from '../utils/toastManager';
 
 
 const styles = {
     disabled: {
-        border: "none",
-        background: "transparent",
+        boxSizing: "border-box",
+        border: "1px solid var(--bs-border-color)",
+        background: "var(--bs-tertiary-bg)",
         width: "100%",
         padding: "0.375rem 0.75rem",
         fontSize: "inherit",
         color: "var(--bs-secondary-color)",
-        outline: "none",
-        fontStyle: "italic",
         pointerEvents: "none"
     },
     enabled: {
@@ -21,8 +20,8 @@ const styles = {
         padding: "0.375rem 0.75rem",
         fontSize: "inherit",
         color: "var(--bs-body-color)",
-        outline: "none",
-        borderRadius: "0.25rem"
+        borderRadius: "0.25rem",
+        boxSizing: "border-box" // ← Add this
     }
 };
 
@@ -32,7 +31,7 @@ const TextCell = ({ value, onChange, isEditing, id, isReadOnly }) => (
         type="text"
         value={value || ''}
         onChange={onChange}
-        style={isReadOnly ? styles.disabled : (isEditing ? styles.enabled : styles.disabled)}
+        style={isEditing ? (isReadOnly ? styles.disabled : styles.enabled) : styles.enabled}
         disabled={!isEditing || isReadOnly}
         className="form-control form-control-sm"
         title={isReadOnly ? "Read-only field" : ""}
@@ -59,7 +58,7 @@ const SelectCell = ({ value, options, onChange, isEditing, isReadOnly }) => (
         value={value || ''}
         onChange={onChange}
         disabled={!isEditing || isReadOnly}
-        style={isReadOnly ? styles.disabled : (isEditing ? styles.enabled : styles.disabled)}
+        style={isEditing ? (isReadOnly ? styles.disabled : styles.enabled) : styles.enabled}
         title={isReadOnly ? "Read-only field" : ""}
     >
         {options?.map((option, index) => (
@@ -128,7 +127,7 @@ export const Cell = ({ row, header, table }) => {
 };
 
 
-export const Row = ({ row, headers, table }) => {
+export const Row = ({ row, headers, table, actionColumnWidth }) => {
     const { updateRow, deleteRow, customActions } = table;
 
     const handleSave = async () => {
@@ -163,24 +162,24 @@ export const Row = ({ row, headers, table }) => {
             {headers.map((header) => (
                 <Cell key={`${row.id}-${header.field}`} row={row} header={header} table={table} />
             ))}
-            <td style={{ width: "150px" }}>
+            <td style={{ width: actionColumnWidth, whiteSpace: "nowrap" }}>
                 {row.isEditing ? (
                     <>
+
                         <i
-                            className="fas fa-check me-3 text-success"
+                            className="fas fa-check me-3 "
                             onClick={handleSave}
                             title="Save"
                             style={{ cursor: "pointer" }}
                         />
                         <i
-                            className="fas fa-times me-3 text-warning"
+                            className="fas fa-times me-3"
                             onClick={handleCancel}
                             title="Cancel"
                             style={{ cursor: "pointer" }}
                         />
-
                         {customActions
-                            .filter((action) => action.isEditOnly)
+                            .filter((action) => action.isEditAction)
                             .map((action, index) => (
                                 <i
                                     key={`edit-action-${index}`}
@@ -194,7 +193,7 @@ export const Row = ({ row, headers, table }) => {
                 ) : (
                     <>
                         {customActions
-                            .filter((action) => !action.isEditOnly)
+                            .filter((action) => !action.isEditAction)
                             .map((action, index) => (
                                 <i
                                     key={`action-${index}`}
@@ -206,13 +205,13 @@ export const Row = ({ row, headers, table }) => {
                             ))}
 
                         <i
-                            className="fas fa-edit text-primary me-3"
+                            className="fas fa-edit me-3"
                             style={{ cursor: "pointer" }}
                             onClick={() => table.toggleEditMode(row.id)}
                             title="Edit"
                         />
                         <i
-                            className="fas fa-trash text-danger"
+                            className="fas fa-trash"
                             style={{ cursor: "pointer" }}
                             onClick={handleDelete}
                             title="Delete"
@@ -225,7 +224,7 @@ export const Row = ({ row, headers, table }) => {
 };
 
 
-export const Table = ({ table, headers }) => {
+export const Table = ({ table, tableTitle, actionColumnWidth = 120 }) => {
     const { tableData } = table;
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage] = useState(10);
@@ -236,18 +235,39 @@ export const Table = ({ table, headers }) => {
     const indexOfFirstRow = indexOfLastRow - rowsPerPage;
     const currentRows = tableData.slice(indexOfFirstRow, indexOfLastRow);
 
+    const hasEditingRow = tableData.some(row => row.isEditing);
+    const editingRow = tableData.find(row => row.isEditing);
+
     const goToPage = (pageNumber) => {
         setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
     };
 
+    useEffect(() => {
+        if (!hasEditingRow) return;
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                // Optional: Prevent conflict with modals
+                const modalOpen = document.querySelector('.modal.show');
+                if (modalOpen) return;
+
+                // Cancel current edit
+                if (editingRow) {
+                    table.toggleEditMode(editingRow.id);
+                    ToastManager.addToast("Edit cancelled.", "info");
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [hasEditingRow, editingRow, table]);
+
     const handleAddNewRow = () => {
         if (table.loading) {
             ToastManager.addToast("Table is still loading. Please wait.", "warning");
-            return;
-        }
-
-        if (!Array.isArray(headers) || headers.length === 0) {
-            ToastManager.addToast("Headers not available.", "danger");
             return;
         }
 
@@ -257,24 +277,25 @@ export const Table = ({ table, headers }) => {
             return;
         }
 
-        const success = table.addNewRow(headers);
+        const success = table.addNewRow();
         if (success) {
-            const newRowPage = Math.ceil(tableData.length / rowsPerPage);
+            const newRowPage = Math.ceil((tableData.length + 1) / rowsPerPage);
             goToPage(newRowPage);
         }
     };
 
     return (
         <div className="mt-4 card">
-            <div className="card-header">
-                <h4>Data Table</h4>
-            </div>
+            {tableTitle && <div className="card-header">
+                <h4>{tableTitle}</h4>
+            </div>}
+
             <div className="card-body">
                 <div className="table-responsive">
-                    <table className="table table-striped table-hover">
+                    <table className="table table-striped table-hover mb-0" style={{ width: '100%' }}>
                         <thead>
                             <tr>
-                                {headers.map((header, index) => (
+                                {table.headers.map((header, index) => (
                                     <th key={index}>{header.name}</th>
                                 ))}
                                 <th>Action</th>
@@ -282,7 +303,7 @@ export const Table = ({ table, headers }) => {
                         </thead>
                         <tbody>
                             {currentRows.map((row) => (
-                                <Row key={row.id} row={row} headers={headers} table={table} />
+                                <Row key={row.id} row={row} headers={table.headers} table={table} actionColumnWidth={actionColumnWidth} />
                             ))}
                         </tbody>
                     </table>
@@ -290,22 +311,52 @@ export const Table = ({ table, headers }) => {
 
                 <div className="d-flex justify-content-between align-items-center mt-3">
                     <div>
-                        <nav>
+                        <nav aria-label="Table pagination">
                             <ul className="pagination mb-0">
+                                {/* Previous Button */}
                                 <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                                    <button className="page-link" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
+                                    <button
+                                        className="page-link text-body border"
+                                        style={{ backgroundColor: 'var(--bs-secondary-bg, #e9ecef)' }}
+                                        onClick={() => goToPage(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        aria-label="Previous page"
+                                    >
                                         Previous
                                     </button>
                                 </li>
+
+                                {/* Page Numbers */}
                                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
                                     <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
-                                        <button className="page-link" onClick={() => goToPage(number)}>
+                                        <button
+                                            className={`page-link border ${currentPage === number
+                                                ? 'bg-secondary text-white'  // ← Changed from primary to secondary
+                                                : 'text-body bg-transparent'
+                                                }`}
+                                            style={{
+                                                backgroundColor: currentPage === number
+                                                    ? 'var(--bs-secondary)'
+                                                    : 'var(--bs-secondary-bg, #e9ecef)'
+                                            }}
+                                            onClick={() => goToPage(number)}
+                                            disabled={currentPage === number}
+                                            aria-label={`Go to page ${number}`}
+                                        >
                                             {number}
                                         </button>
                                     </li>
                                 ))}
+
+                                {/* Next Button */}
                                 <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                                    <button className="page-link" onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                                    <button
+                                        className="page-link text-body border"
+                                        style={{ backgroundColor: 'var(--bs-secondary-bg, #e9ecef)' }}
+                                        onClick={() => goToPage(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        aria-label="Next page"
+                                    >
                                         Next
                                     </button>
                                 </li>
@@ -313,10 +364,28 @@ export const Table = ({ table, headers }) => {
                         </nav>
                     </div>
 
-                    <div>
-                        <button className="btn btn-primary" onClick={handleAddNewRow}>
-                            <i className="fas fa-plus me-2"></i>Add New Row
+                    <div className="d-flex gap-2">
+                        {/* Default Add New Row Button */}
+                        <button
+                            className="btn btn-outline-secondary"
+                            onClick={handleAddNewRow}>
+                            <i className="fas fa-plus"></i>
                         </button>
+
+                        {/* Custom Table Buttons */}
+                        {table.customButtons.map((btn, index) => (
+                            <button
+                                key={`table-btn-${index}`}
+                                className={`btn ${btn.variant || 'btn-outline-secondary'}`}
+                                onClick={() => btn.onClick(table)}
+                                title={btn.title}
+                                disabled={btn.disabled}
+                                style={{ whiteSpace: 'nowrap', ...btn.style }}
+                            >
+                                <i className={`${btn.icon} me-1`}></i>
+                                {btn.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
