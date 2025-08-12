@@ -2,7 +2,7 @@
 <Project>
   <PropertyGroup>
     <PackageJsonName Condition="$(PackageJsonName) == ''">@selestra11/react.table</PackageJsonName>
-    <PackageJsonVersion Condition="$(PackageJsonVersion) == ''">0.0.22</PackageJsonVersion>
+    <PackageJsonVersion Condition="$(PackageJsonVersion) == ''">0.0.23</PackageJsonVersion>
     <PackageJsonMain Condition="$(PackageJsonMain) == ''">dist/react.table.umd.js</PackageJsonMain>
     <PackageJsonModule Condition="$(PackageJsonModule) == ''">dist/react.table.es.js</PackageJsonModule>
     <PackageJsonPeerdependenciesReact Condition="$(PackageJsonPeerdependenciesReact) == ''">&gt;=19.0.0 &lt;20.0.0</PackageJsonPeerdependenciesReact>

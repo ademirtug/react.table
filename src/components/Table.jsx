@@ -5,74 +5,102 @@ import ToastManager from '../utils/toastManager';
 const styles = {
     disabled: {
         boxSizing: "border-box",
-        border: "1px solid var(--bs-border-color)",
         background: "var(--bs-tertiary-bg)",
         width: "100%",
-        padding: "0.375rem 0.75rem",
         fontSize: "inherit",
         color: "var(--bs-secondary-color)",
         pointerEvents: "none"
     },
     enabled: {
-        border: "1px solid var(--bs-border-color)",
+        boxSizing: "border-box",
         background: "var(--bs-body-bg)",
         width: "100%",
-        padding: "0.375rem 0.75rem",
         fontSize: "inherit",
         color: "var(--bs-body-color)",
-        borderRadius: "0.25rem",
-        boxSizing: "border-box"
+        borderRadius: "0.25rem"
     }
 };
 
-const TextCell = ({ value, onChange, isEditing, id, isReadOnly }) => (
-    <input
-        key={`${id}-text`}
-        type="text"
-        value={value || ''}
-        onChange={onChange}
-        style={isEditing ? (isReadOnly ? styles.disabled : styles.enabled) : styles.enabled}
-        disabled={!isEditing || isReadOnly}
-        className="form-control form-control-sm"
-        title={isReadOnly ? "Read-only field" : ""}
-    />
-);
+const TextCell = ({ value, onChange, isEditing, id, isReadOnly }) => {
+    if (!isEditing || isReadOnly) {
+        // View mode OR read-only: display as plain text
+        return (
+            <div className="px-3 py-2" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {value || <span className="text-muted">—</span>}
+            </div>
+        );
+    }
 
-const CheckboxCell = ({ value, onChange, isEditing, isReadOnly }) => (
-    <div className="form-check d-flex justify-content-center">
+    // Edit mode and editable: show input
+    return (
         <input
-            type="checkbox"
-            className="form-check-input"
-            checked={value || false}
+            key={`${id}-text`}
+            type="text"
+            value={value || ''}
             onChange={onChange}
-            disabled={!isEditing || isReadOnly}
-            style={{ cursor: isReadOnly || !isEditing ? "default" : "pointer" }}
-            title={isReadOnly ? "Read-only field" : ""}
+            style={styles.enabled}
+            className="form-control form-control-sm px-3 py-2"
         />
-    </div>
-);
+    );
+};
 
-const SelectCell = ({ value, options, onChange, isEditing, isReadOnly }) => (
-    <select
-        className="form-select form-select-sm"
-        value={value || ''}
-        onChange={onChange}
-        disabled={!isEditing || isReadOnly}
-        style={isEditing ? (isReadOnly ? styles.disabled : styles.enabled) : styles.enabled}
-        title={isReadOnly ? "Read-only field" : ""}
-    >
-        {options?.map((option, index) => (
-            <option key={index} value={option}>
-                {option}
-            </option>
-        ))}
-    </select>
-);
+const CheckboxCell = ({ value, onChange, isEditing, isReadOnly }) => {
+    if (!isEditing || isReadOnly) {
+        // View mode OR read-only: centered icon
+        return (
+            <div className="d-flex align-items-center justify-content-center px-3 py-2">
+                {value ? (
+                    <i className="fas fa-check text-success"></i>
+                ) : (
+                    <i className="fas fa-times text-secondary"></i>
+                )}
+            </div>
+        );
+    }
 
+    // Edit mode and editable: show checkbox
+    return (
+        <div className="d-flex align-items-center justify-content-center px-3 py-2">
+            <input
+                type="checkbox"
+                className="form-check-input"
+                checked={value || false}
+                onChange={onChange}
+                style={{ cursor: "pointer" }}
+            />
+        </div>
+    );
+};
+const SelectCell = ({ value, options, onChange, isEditing, isReadOnly }) => {
+    const displayValue = options?.includes(value) ? value : <span className="text-muted">—</span>;
 
+    if (!isEditing || isReadOnly) {
+        // View mode OR read-only: display value only
+        return (
+            <div className="px-3 py-2" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {displayValue}
+            </div>
+        );
+    }
+
+    // Edit mode and editable: show select dropdown
+    return (
+        <select
+            className="form-select form-select-sm px-3 py-2"
+            value={value || ''}
+            onChange={onChange}
+            style={styles.enabled}
+        >
+            {options?.map((option, index) => (
+                <option key={index} value={option}>
+                    {option}
+                </option>
+            ))}
+        </select>
+    );
+};
 export const Cell = ({ row, header, table }) => {
     const { handleChange } = table;
-
     const isReadOnly = !!header.readOnly;
     const isEditing = row.isEditing;
 
@@ -122,7 +150,11 @@ export const Cell = ({ row, header, table }) => {
             );
 
         default:
-            return <td>{row[header.field]}</td>;
+            return (
+                <td className="px-3 py-2" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {row[header.field] || <span className="text-muted">—</span>}
+                </td>
+            );
     }
 };
 
@@ -267,7 +299,7 @@ export const Table = ({ tableModel, title, actionColumnWidth = 120 }) => {
 
             <div className="card-body">
                 <div className="table-responsive">
-                    <table className="table table-striped table-hover mb-0" style={{ width: '100%' }}>
+                    <table className="table table-striped table-hover mb-0" style={{ width: '100%', tableLayout: 'fixed' }}>
                         <thead>
                             <tr>
                                 {tableModel.headers.map((header, index) => {

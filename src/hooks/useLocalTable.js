@@ -78,28 +78,33 @@ export function useLocalTable({
 
     const addRowFn = async (row) => {
         const current = getData();
-        const newRow = { ...row };
 
-        if (row.fileUpload instanceof File) {
-            newRow.fileUpload = row.fileUpload.name;
-        }
+        const { isEditing, isNew, ...persistedRow } = {
+            ...row,
+            fileUpload: row.fileUpload instanceof File
+                ? row.fileUpload.name
+                : row.fileUpload
+        };
 
-        const updated = [...current, newRow];
+        const updated = [...current, persistedRow];
         saveData(updated);
-        return { ok: true, id: row.id, row: newRow };
+        return { ok: true, id: row.id, row: persistedRow };
     };
 
     const updateRowFn = async (row) => {
         const current = getData();
+
+        const { isEditing, isNew, ...persistedRow } = {
+            ...row,
+            fileUpload: row.fileUpload instanceof File
+                ? row.fileUpload.name
+                : row.fileUpload
+        };
+
         const index = current.findIndex(r => r.id === row.id);
         if (index === -1) return { ok: false, message: "Row not found" };
 
-        const updatedRow = { ...row };
-        if (row.fileUpload instanceof File) {
-            updatedRow.fileUpload = row.fileUpload.name;
-        }
-
-        current[index] = updatedRow;
+        current[index] = persistedRow;
         saveData(current);
         return { ok: true };
     };
@@ -153,7 +158,7 @@ export function useLocalTable({
             sync,
             syncAll,
             uploadFile,
-            deleteAllRows, // 👈 now available in tableModel
+            deleteAllRows,
             ...extraMethods
         }
     });
