@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useEffect } from "react";
 import ToastManager from '../utils/toastManager';
 
 
@@ -21,7 +21,7 @@ const styles = {
         fontSize: "inherit",
         color: "var(--bs-body-color)",
         borderRadius: "0.25rem",
-        boxSizing: "border-box" // ← Add this
+        boxSizing: "border-box"
     }
 };
 
@@ -127,47 +127,37 @@ export const Cell = ({ row, header, table }) => {
 };
 
 
-export const Row = ({ row, headers, table, actionColumnWidth }) => {
-    const { updateRow, deleteRow, customActions } = table;
+export const Row = ({ row, headers, tableModel, actionColumnWidth }) => {
 
     const handleSave = async () => {
-        const response = await updateRow(row);
-        if (response.ok) {
-            ToastManager.addToast("Saved successfully!", "success");
-        } else {
-            ToastManager.addToast(response.message || "Failed to save", "danger");
-        }
+        await tableModel.saveRow(row);
     };
 
     const handleCancel = () => {
         if (row.isNew) {
-            deleteRow(row.id);
+            tableModel.deleteRow(row.id);
         } else {
-            table.toggleEditMode(row.id);
+            tableModel.toggleEditMode(row.id);
         }
     };
 
     const handleDelete = async () => {
         const name = row.name || `Row ${row.id}`;
         if (window.confirm(`Delete "${name}"?`)) {
-            const response = await deleteRow(row.id);
-            if (response.ok) {
-                ToastManager.addToast("Deleted successfully!", "success");
-            }
+            await tableModel.deleteRow(row.id);
         }
     };
 
     return (
         <tr className="align-middle">
             {headers.map((header) => (
-                <Cell key={`${row.id}-${header.field}`} row={row} header={header} table={table} />
+                <Cell key={`${row.id}-${header.field}`} row={row} header={header} table={tableModel} />
             ))}
             <td style={{ width: actionColumnWidth, whiteSpace: "nowrap" }}>
                 {row.isEditing ? (
                     <>
-
                         <i
-                            className="fas fa-check me-3 "
+                            className="fas fa-check me-3"
                             onClick={handleSave}
                             title="Save"
                             style={{ cursor: "pointer" }}
@@ -178,28 +168,28 @@ export const Row = ({ row, headers, table, actionColumnWidth }) => {
                             title="Cancel"
                             style={{ cursor: "pointer" }}
                         />
-                        {customActions
+                        {tableModel.customActions
                             .filter((action) => action.isEditAction)
                             .map((action, index) => (
                                 <i
                                     key={`edit-action-${index}`}
                                     className={`${action.icon} me-3`}
                                     style={{ cursor: "pointer" }}
-                                    onClick={() => action.onClick(row, table)}
+                                    onClick={() => action.onClick(row, tableModel)}
                                     title={action.title}
                                 />
                             ))}
                     </>
                 ) : (
                     <>
-                        {customActions
+                        {tableModel.customActions
                             .filter((action) => !action.isEditAction)
                             .map((action, index) => (
                                 <i
                                     key={`action-${index}`}
                                     className={`${action.icon} me-3`}
                                     style={{ cursor: "pointer" }}
-                                    onClick={() => action.onClick(row, table)}
+                                    onClick={() => action.onClick(row, tableModel)}
                                     title={action.title}
                                 />
                             ))}
@@ -207,7 +197,7 @@ export const Row = ({ row, headers, table, actionColumnWidth }) => {
                         <i
                             className="fas fa-edit me-3"
                             style={{ cursor: "pointer" }}
-                            onClick={() => table.toggleEditMode(row.id)}
+                            onClick={() => tableModel.toggleEditMode(row.id)}
                             title="Edit"
                         />
                         <i
@@ -222,24 +212,25 @@ export const Row = ({ row, headers, table, actionColumnWidth }) => {
         </tr>
     );
 };
+export const Table = ({ tableModel, title, actionColumnWidth = 120 }) => {
+    const { page, limit, total, lastPage } = tableModel.pagination;
 
+    const hasEditingRow = tableModel.tableData.some((row) => row.isEditing);
+    const editingRow = tableModel.tableData.find((row) => row.isEditing);
 
-export const Table = ({ table, tableTitle, actionColumnWidth = 120 }) => {
-    const { tableData } = table;
-    const [currentPage, setCurrentPage] = useState(1);
-    const [rowsPerPage] = useState(10);
+    const handleAddNewRow = () => {
+        if (tableModel.loading) {
+            ToastManager.addToast("Table is still loading. Please wait.", "warning");
+            return;
+        }
 
-    const totalRows = tableData.length;
-    const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
-    const indexOfLastRow = currentPage * rowsPerPage;
-    const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-    const currentRows = tableData.slice(indexOfFirstRow, indexOfLastRow);
+        const editingExists = tableModel.tableData.some((row) => row.isEditing);
+        if (editingExists) {
+            ToastManager.addToast("Please save or cancel the current edit first.", "warning");
+            return;
+        }
 
-    const hasEditingRow = tableData.some(row => row.isEditing);
-    const editingRow = tableData.find(row => row.isEditing);
-
-    const goToPage = (pageNumber) => {
-        setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
+        tableModel.addNewRow();
     };
 
     useEffect(() => {
@@ -247,14 +238,15 @@ export const Table = ({ table, tableTitle, actionColumnWidth = 120 }) => {
 
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
-                // Optional: Prevent conflict with modals
                 const modalOpen = document.querySelector('.modal.show');
                 if (modalOpen) return;
-
-                // Cancel current edit
                 if (editingRow) {
-                    table.toggleEditMode(editingRow.id);
+                    tableModel.toggleEditMode(editingRow.id);
                     ToastManager.addToast("Edit cancelled.", "info");
+                }
+            } else if (e.key === 'Enter') {
+                if (editingRow) {
+                    tableModel.saveRow(editingRow);
                 }
             }
         };
@@ -263,123 +255,175 @@ export const Table = ({ table, tableTitle, actionColumnWidth = 120 }) => {
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [hasEditingRow, editingRow, table]);
-
-    const handleAddNewRow = () => {
-        if (table.loading) {
-            ToastManager.addToast("Table is still loading. Please wait.", "warning");
-            return;
-        }
-
-        const editingExists = table.tableData.some(row => row.isEditing);
-        if (editingExists) {
-            ToastManager.addToast("Please save or cancel the current edit first.", "warning");
-            return;
-        }
-
-        const success = table.addNewRow();
-        if (success) {
-            const newRowPage = Math.ceil((tableData.length + 1) / rowsPerPage);
-            goToPage(newRowPage);
-        }
-    };
+    }, [hasEditingRow, editingRow, tableModel]);
 
     return (
         <div className="mt-4 card">
-            {tableTitle && <div className="card-header">
-                <h4>{tableTitle}</h4>
-            </div>}
+            {title && (
+                <div className="card-header">
+                    <h4>{title}</h4>
+                </div>
+            )}
 
             <div className="card-body">
                 <div className="table-responsive">
                     <table className="table table-striped table-hover mb-0" style={{ width: '100%' }}>
                         <thead>
                             <tr>
-                                {table.headers.map((header, index) => (
-                                    <th key={index}>{header.name}</th>
-                                ))}
-                                <th>Action</th>
+                                {tableModel.headers.map((header, index) => {
+                                    const isSortable = header.sortable !== false; // default to true unless explicitly false
+                                    const sortIcon = () => {
+                                        if (!tableModel.sort || tableModel.sort.field !== header.field) {
+                                            return null;
+                                        }
+                                        return tableModel.sort.order === 'asc' ? ' ▲' : ' ▼';
+                                    };
+
+                                    return (
+                                        <th
+                                            key={index}
+                                            style={{ cursor: isSortable ? "pointer" : "default", position: "relative" }}
+                                            onClick={() => isSortable && tableModel.setSortField(header.field)}
+                                            title={isSortable ? `Sort by ${header.name}` : ""}
+                                        >
+                                            <span>{header.name}</span>
+                                            <span style={{ fontSize: "0.8em", color: "var(--bs-secondary-color)" }}>
+                                                {sortIcon()}
+                                            </span>
+                                        </th>
+                                    );
+                                })}
+                                <th style={{ width: actionColumnWidth }}>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {currentRows.map((row) => (
-                                <Row key={row.id} row={row} headers={table.headers} table={table} actionColumnWidth={actionColumnWidth} />
-                            ))}
+                            {tableModel.tableData.length === 0 && !tableModel.loading ? (
+                                <tr>
+                                    <td colSpan={tableModel.headers.length + 1} className="text-center text-muted py-4">
+                                        No data available
+                                    </td>
+                                </tr>
+                            ) : (
+                                tableModel.tableData.map((row) => (
+                                    <Row
+                                        key={row.id}
+                                        row={row}
+                                        headers={tableModel.headers}
+                                        tableModel={tableModel}
+                                        actionColumnWidth={actionColumnWidth}
+                                    />
+                                ))
+                            )}
                         </tbody>
                     </table>
+
+                    {tableModel.loading && (
+                        <div className="text-center my-3">
+                            <div className="spinner-border text-primary" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                <div className="d-flex justify-content-between align-items-center mt-3">
-                    <div>
+                <div className="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+                    <div className="d-flex align-items-center flex-wrap gap-2">
                         <nav aria-label="Table pagination">
                             <ul className="pagination mb-0">
-                                {/* Previous Button */}
-                                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                                <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
                                     <button
-                                        className="page-link text-body border"
+                                        className="page-link border"
                                         style={{ backgroundColor: 'var(--bs-secondary-bg, #e9ecef)' }}
-                                        onClick={() => goToPage(currentPage - 1)}
-                                        disabled={currentPage === 1}
-                                        aria-label="Previous page"
+                                        onClick={() => tableModel.goToPage(page - 1)}
+                                        disabled={page === 1 || tableModel.loading}
                                     >
                                         Previous
                                     </button>
                                 </li>
 
-                                {/* Page Numbers */}
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-                                    <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
+                                {Array.from({ length: Math.min(lastPage, 5) }, (_, i) => {
+                                    let pageNum;
+                                    if (lastPage <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (page <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (page >= lastPage - 2) {
+                                        pageNum = lastPage - 4 + i;
+                                    } else {
+                                        pageNum = page - 2 + i;
+                                    }
+                                    return pageNum;
+                                }).map((number) => (
+                                    <li key={number} className={`page-item ${page === number ? 'active' : ''}`}>
                                         <button
-                                            className={`page-link border ${currentPage === number
-                                                ? 'bg-secondary text-white'  // ← Changed from primary to secondary
+                                            className={`page-link border ${page === number
+                                                ? 'bg-secondary text-white'
                                                 : 'text-body bg-transparent'
                                                 }`}
                                             style={{
-                                                backgroundColor: currentPage === number
+                                                backgroundColor: page === number
                                                     ? 'var(--bs-secondary)'
-                                                    : 'var(--bs-secondary-bg, #e9ecef)'
+                                                    : 'var(--bs-secondary-bg, #e9ecef)',
                                             }}
-                                            onClick={() => goToPage(number)}
-                                            disabled={currentPage === number}
-                                            aria-label={`Go to page ${number}`}
+                                            onClick={() => tableModel.goToPage(number)}
+                                            disabled={tableModel.loading}
                                         >
                                             {number}
                                         </button>
                                     </li>
                                 ))}
 
-                                {/* Next Button */}
-                                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                                <li className={`page-item ${page === lastPage ? 'disabled' : ''}`}>
                                     <button
-                                        className="page-link text-body border"
+                                        className="page-link border"
                                         style={{ backgroundColor: 'var(--bs-secondary-bg, #e9ecef)' }}
-                                        onClick={() => goToPage(currentPage + 1)}
-                                        disabled={currentPage === totalPages}
-                                        aria-label="Next page"
+                                        onClick={() => tableModel.goToPage(page + 1)}
+                                        disabled={page === lastPage || tableModel.loading}
                                     >
                                         Next
                                     </button>
                                 </li>
                             </ul>
                         </nav>
+
+                        <div className="d-flex align-items-center gap-1">
+                            <label htmlFor="page-limit" className="mb-0 text-nowrap">
+                                Show:
+                            </label>
+                            <select
+                                id="page-limit"
+                                className="form-select form-select"
+                                value={limit}
+                                onChange={(e) => tableModel.setLimit(Number(e.target.value))}
+                                disabled={tableModel.loading}
+                                style={{ width: "auto", minWidth: "80px" }}
+                            >
+                                {[10, 25, 50, 100].map((val) => (
+                                    <option key={val} value={val}>
+                                        {val}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
-                    <div className="d-flex gap-2">
-                        {/* Default Add New Row Button */}
+                    <div className="d-flex flex-wrap gap-2">
                         <button
-                            className="btn btn-outline-secondary"
-                            onClick={handleAddNewRow}>
-                            <i className="fas fa-plus"></i>
+                            className="btn btn-outline-secondary "
+                            onClick={handleAddNewRow}
+                            disabled={tableModel.loading}
+                            title="Add new item"
+                        >
+                            <i className="fas fa-plus"></i> Add
                         </button>
 
-                        {/* Custom Table Buttons */}
-                        {table.customButtons.map((btn, index) => (
+                        {tableModel.customButtons.map((btn, index) => (
                             <button
                                 key={`table-btn-${index}`}
                                 className={`btn ${btn.variant || 'btn-outline-secondary'}`}
-                                onClick={() => btn.onClick(table)}
+                                onClick={() => btn.onClick(tableModel)}
                                 title={btn.title}
-                                disabled={btn.disabled}
+                                disabled={btn.disabled || tableModel.loading}
                                 style={{ whiteSpace: 'nowrap', ...btn.style }}
                             >
                                 <i className={`${btn.icon} me-1`}></i>
@@ -389,8 +433,12 @@ export const Table = ({ table, tableTitle, actionColumnWidth = 120 }) => {
                     </div>
                 </div>
 
-                <div className="text-muted small mt-2">
-                    Showing {totalRows > 0 ? indexOfFirstRow + 1 : 0} to {Math.min(indexOfLastRow, totalRows)} of {totalRows} entries
+                {/* Optional: Entry info below the controls */}
+                <div className="text-muted small mt-2 text-center">
+                    {tableModel.loading
+                        ? "Loading..."
+                        : `Showing ${tableModel.tableData.length > 0 ? (page - 1) * limit + 1 : 0}
+                           to ${(page - 1) * limit + tableModel.tableData.length} of ${total} entries`}
                 </div>
             </div>
         </div>
