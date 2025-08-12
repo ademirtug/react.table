@@ -23,22 +23,33 @@ const styles = {
 
 const TextCell = ({ value, onChange, isEditing, id, isReadOnly }) => {
     if (!isEditing || isReadOnly) {
-        // View mode OR read-only: display as plain text
         return (
-            <div className="px-3 py-2" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div
+                className="px-3 py-2"
+                style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    // ADD THIS TRANSPARENT BORDER TO MATCH EDIT MODE LAYOUT
+                    border: '1px solid transparent'
+                }}
+            >
                 {value || <span className="text-muted">—</span>}
             </div>
         );
     }
 
-    // Edit mode and editable: show input
     return (
         <input
             key={`${id}-text`}
             type="text"
             value={value || ''}
             onChange={onChange}
-            style={styles.enabled}
+            style={{
+                ...styles.enabled,
+                // EXPLICITLY SET BORDER TO OVERRIDE BOOTSTRAP
+                border: '1px solid var(--bs-border-color)'
+            }}
             className="form-control form-control-sm px-3 py-2"
         />
     );
@@ -46,9 +57,12 @@ const TextCell = ({ value, onChange, isEditing, id, isReadOnly }) => {
 
 const CheckboxCell = ({ value, onChange, isEditing, isReadOnly }) => {
     if (!isEditing || isReadOnly) {
-        // View mode OR read-only: centered icon
+        // View mode OR read-only: centered icon with border placeholder
         return (
-            <div className="d-flex align-items-center justify-content-center px-3 py-2">
+            <div
+                className="d-flex align-items-center justify-content-center px-3 py-2"
+                style={{ border: '1px solid transparent' }} // Match edit mode layout
+            >
                 {value ? (
                     <i className="fas fa-check text-success"></i>
                 ) : (
@@ -58,9 +72,12 @@ const CheckboxCell = ({ value, onChange, isEditing, isReadOnly }) => {
         );
     }
 
-    // Edit mode and editable: show checkbox
+    // Edit mode and editable: show checkbox with consistent layout
     return (
-        <div className="d-flex align-items-center justify-content-center px-3 py-2">
+        <div
+            className="d-flex align-items-center justify-content-center px-3 py-2"
+            style={{ border: '1px solid transparent' }} // Visible border
+        >
             <input
                 type="checkbox"
                 className="form-check-input"
@@ -75,21 +92,32 @@ const SelectCell = ({ value, options, onChange, isEditing, isReadOnly }) => {
     const displayValue = options?.includes(value) ? value : <span className="text-muted">—</span>;
 
     if (!isEditing || isReadOnly) {
-        // View mode OR read-only: display value only
+        // View mode OR read-only: display value only with border placeholder
         return (
-            <div className="px-3 py-2" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div
+                className="px-3 py-2"
+                style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    border: '1px solid transparent' // Prevent layout shift
+                }}
+            >
                 {displayValue}
             </div>
         );
     }
 
-    // Edit mode and editable: show select dropdown
+    // Edit mode and editable: show select dropdown with explicit border
     return (
         <select
             className="form-select form-select-sm px-3 py-2"
             value={value || ''}
             onChange={onChange}
-            style={styles.enabled}
+            style={{
+                ...styles.enabled,
+                border: '1px solid var(--bs-border-color)'
+            }}
         >
             {options?.map((option, index) => (
                 <option key={index} value={option}>

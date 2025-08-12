@@ -23,7 +23,7 @@ const generateSampleData = () => {
 
 // Define your table headers
 const tableHeaders = [
-    { field: "name", name: "Name", type: "text", readOnly: true },
+    { field: "name", name: "Name", type: "text" },
     { field: "is_active", name: "Active", type: "checkbox" },
     { field: "status", name: "Status", type: "select", options: ["In Progress", "Completed", "Pending"] },
 ];
