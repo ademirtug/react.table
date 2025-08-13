@@ -186,9 +186,7 @@ export const Cell = ({ row, header, table }) => {
     }
 };
 
-
-export const Row = ({ row, headers, tableModel, actionColumnWidth }) => {
-
+export const Row = ({ row, headers, tableModel }) => {
     const handleSave = async () => {
         await tableModel.saveRow(row);
     };
@@ -211,68 +209,113 @@ export const Row = ({ row, headers, tableModel, actionColumnWidth }) => {
     return (
         <tr className="align-middle">
             {headers.map((header) => (
-                <Cell key={`${row.id}-${header.field}`} row={row} header={header} table={tableModel} />
+                <Cell
+                    key={`${row.id}-${header.field}`}
+                    row={row}
+                    header={header}
+                    table={tableModel}
+                />
             ))}
-            <td style={{ width: actionColumnWidth, whiteSpace: "nowrap" }}>
-                {row.isEditing ? (
-                    <>
-                        <i
-                            className="fas fa-check me-3"
-                            onClick={handleSave}
-                            title="Save"
-                            style={{ cursor: "pointer" }}
-                        />
-                        <i
-                            className="fas fa-times me-3"
-                            onClick={handleCancel}
-                            title="Cancel"
-                            style={{ cursor: "pointer" }}
-                        />
-                        {tableModel.customActions
-                            .filter((action) => action.isEditAction)
-                            .map((action, index) => (
-                                <i
-                                    key={`edit-action-${index}`}
-                                    className={`${action.icon} me-3`}
-                                    style={{ cursor: "pointer" }}
-                                    onClick={() => action.onClick(row, tableModel)}
-                                    title={action.title}
-                                />
-                            ))}
-                    </>
-                ) : (
-                    <>
-                        {tableModel.customActions
-                            .filter((action) => !action.isEditAction)
-                            .map((action, index) => (
-                                <i
-                                    key={`action-${index}`}
-                                    className={`${action.icon} me-3`}
-                                    style={{ cursor: "pointer" }}
-                                    onClick={() => action.onClick(row, tableModel)}
-                                    title={action.title}
-                                />
-                            ))}
-
-                        <i
-                            className="fas fa-edit me-3"
-                            style={{ cursor: "pointer" }}
-                            onClick={() => tableModel.toggleEditMode(row.id)}
-                            title="Edit"
-                        />
-                        <i
-                            className="fas fa-trash"
-                            style={{ cursor: "pointer" }}
-                            onClick={handleDelete}
-                            title="Delete"
-                        />
-                    </>
-                )}
+            <td
+                className="text-end"
+                style={{
+                    width: 'min-content',
+                    whiteSpace: 'nowrap',
+                    padding: '0.25rem 0.5rem'
+                }}
+            >
+                <div className="dropdown d-inline-block">
+                    <button
+                        className="btn btn-sm btn-outline-secondary border-0"
+                        type="button"
+                        id={`dropdownMenuButton-${row.id}`}
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        style={{
+                            padding: '0.25rem 0.5rem',
+                            minWidth: 0
+                        }}
+                    >
+                        <i className="fas fa-ellipsis" style={{ fontSize: '1.25rem' }}></i>
+                    </button>
+                    <ul
+                        className="dropdown-menu dropdown-menu-end"
+                        aria-labelledby={`dropdownMenuButton-${row.id}`}
+                    >
+                        {row.isEditing ? (
+                            <>
+                                <li>
+                                    <button className="dropdown-item" onClick={handleSave}>
+                                        <i className="fas fa-check me-2"></i> Save
+                                    </button>
+                                </li>
+                                <li>
+                                    <button className="dropdown-item" onClick={handleCancel}>
+                                        <i className="fas fa-times me-2"></i> Cancel
+                                    </button>
+                                </li>
+                                {tableModel.customActions
+                                    .filter((action) => action.isEditAction)
+                                    .map((action, index) => (
+                                        <li key={`edit-action-${index}`}>
+                                            <button
+                                                className="dropdown-item"
+                                                onClick={() =>
+                                                    action.onClick(row, tableModel)
+                                                }
+                                            >
+                                                <i className={`${action.icon} me-2`}></i>
+                                                {action.title}
+                                            </button>
+                                        </li>
+                                    ))}
+                            </>
+                        ) : (
+                            <>
+                                <li>
+                                    <button
+                                        className="dropdown-item"
+                                        onClick={() =>
+                                            tableModel.toggleEditMode(row.id)
+                                        }
+                                    >
+                                        <i className="fas fa-edit me-2"></i> Edit
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        className="dropdown-item"
+                                        onClick={handleDelete}
+                                    >
+                                        <i className="fas fa-trash me-2"></i> Delete
+                                    </button>
+                                </li>
+                                {tableModel.customActions
+                                    .filter((action) => !action.isEditAction)
+                                    .map((action, index) => (
+                                        <li key={`action-${index}`}>
+                                            <button
+                                                className="dropdown-item"
+                                                onClick={() =>
+                                                    action.onClick(row, tableModel)
+                                                }
+                                            >
+                                                <i className={`${action.icon} me-2`}></i>
+                                                {action.title}
+                                            </button>
+                                        </li>
+                                    ))}
+                            </>
+                        )}
+                    </ul>
+                </div>
             </td>
         </tr>
     );
 };
-export const Table = ({ tableModel, title, actionColumnWidth = 120 }) => {
+
+
+export const Table = ({ tableModel, title }) => {
     const { page, limit, total, lastPage } = tableModel.pagination;
 
     const hasEditingRow = tableModel.tableData.some((row) => row.isEditing);
@@ -283,13 +326,10 @@ export const Table = ({ tableModel, title, actionColumnWidth = 120 }) => {
             ToastManager.addToast("Table is still loading. Please wait.", "warning");
             return;
         }
-
-        const editingExists = tableModel.tableData.some((row) => row.isEditing);
-        if (editingExists) {
+        if (hasEditingRow) {
             ToastManager.addToast("Please save or cancel the current edit first.", "warning");
             return;
         }
-
         tableModel.addNewRow();
     };
 
@@ -312,9 +352,7 @@ export const Table = ({ tableModel, title, actionColumnWidth = 120 }) => {
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, [hasEditingRow, editingRow, tableModel]);
 
     return (
@@ -327,22 +365,31 @@ export const Table = ({ tableModel, title, actionColumnWidth = 120 }) => {
 
             <div className="card-body">
                 <div className="table-responsive">
-                    <table className="table table-striped table-hover mb-0" style={{ width: '100%', tableLayout: 'fixed' }}>
+                    <table
+                        className="table table-striped table-hover mb-0"
+                        style={{
+                            width: '100%',
+                            tableLayout: 'fixed'
+                        }}
+                    >
                         <thead>
                             <tr>
                                 {tableModel.headers.map((header, index) => {
-                                    const isSortable = header.sortable !== false; // default to true unless explicitly false
+                                    const isSortable = header.sortable !== false;
                                     const sortIcon = () => {
-                                        if (!tableModel.sort || tableModel.sort.field !== header.field) {
-                                            return null;
-                                        }
+                                        if (!tableModel.sort || tableModel.sort.field !== header.field) return null;
                                         return tableModel.sort.order === 'asc' ? ' ▲' : ' ▼';
                                     };
-
                                     return (
                                         <th
                                             key={index}
-                                            style={{ cursor: isSortable ? "pointer" : "default", position: "relative" }}
+                                            style={{
+                                                cursor: isSortable ? "pointer" : "default",
+                                                position: "relative",
+                                                whiteSpace: "nowrap",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis"
+                                            }}
                                             onClick={() => isSortable && tableModel.setSortField(header.field)}
                                             title={isSortable ? `Sort by ${header.name}` : ""}
                                         >
@@ -353,7 +400,15 @@ export const Table = ({ tableModel, title, actionColumnWidth = 120 }) => {
                                         </th>
                                     );
                                 })}
-                                <th style={{ width: actionColumnWidth }}>Action</th>
+                                <th
+                                    style={{
+                                        width: 'min-content',
+                                        whiteSpace: 'nowrap',
+                                        textAlign: 'right'
+                                    }}
+                                >
+                                    Action
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -370,20 +425,11 @@ export const Table = ({ tableModel, title, actionColumnWidth = 120 }) => {
                                         row={row}
                                         headers={tableModel.headers}
                                         tableModel={tableModel}
-                                        actionColumnWidth={actionColumnWidth}
                                     />
                                 ))
                             )}
                         </tbody>
                     </table>
-
-                    {tableModel.loading && (
-                        <div className="text-center my-3">
-                            <div className="spinner-border text-primary" role="status">
-                                <span className="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 <div className="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">

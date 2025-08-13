@@ -1,6 +1,6 @@
 {
   "name": "@selestra11/react.table",
-  "version": "0.0.24",
+  "version": "0.0.25",
   "main": "dist/react.table.umd.js",
   "module": "dist/react.table.es.js",
   "peerDependencies": {
