@@ -21,18 +21,23 @@ const styles = {
     }
 };
 
-const TextCell = ({ value, onChange, isEditing, id, isReadOnly }) => {
+const TextCell = ({ value, onChange, isEditing, id, isReadOnly, maxWidth }) => {
+    const cellContentStyle = {
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        border: '1px solid transparent',
+        width: maxWidth || '100%', // Respect the passed width
+        maxWidth: maxWidth || '100%',
+        boxSizing: 'border-box'
+    };
+
     if (!isEditing || isReadOnly) {
         return (
             <div
                 className="px-3 py-2"
-                style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    // ADD THIS TRANSPARENT BORDER TO MATCH EDIT MODE LAYOUT
-                    border: '1px solid transparent'
-                }}
+                style={cellContentStyle}
+                title={value}
             >
                 {value || <span className="text-muted">—</span>}
             </div>
@@ -47,11 +52,58 @@ const TextCell = ({ value, onChange, isEditing, id, isReadOnly }) => {
             onChange={onChange}
             style={{
                 ...styles.enabled,
-                // EXPLICITLY SET BORDER TO OVERRIDE BOOTSTRAP
-                border: '1px solid var(--bs-border-color)'
+                border: '1px solid var(--bs-border-color)',
+                width: maxWidth || '100%', // Respect the passed width
+                maxWidth: maxWidth || '100%',
+                boxSizing: 'border-box'
             }}
             className="form-control form-control-sm px-3 py-2"
         />
+    );
+};
+
+const SelectCell = ({ value, options, onChange, isEditing, isReadOnly, maxWidth }) => {
+    const displayValue = options?.includes(value) ? value : <span className="text-muted">—</span>;
+    const cellContentStyle = {
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        border: '1px solid transparent',
+        width: maxWidth || '100%', // Respect the passed width
+        maxWidth: maxWidth || '100%',
+        boxSizing: 'border-box'
+    };
+
+    if (!isEditing || isReadOnly) {
+        return (
+            <div
+                className="px-3 py-2"
+                style={cellContentStyle}
+            >
+                {displayValue}
+            </div>
+        );
+    }
+
+    return (
+        <select
+            className="form-select form-select-sm px-3 py-2"
+            value={value || ''}
+            onChange={onChange}
+            style={{
+                ...styles.enabled,
+                border: '1px solid var(--bs-border-color)',
+                width: maxWidth || '100%', // Respect the passed width
+                maxWidth: maxWidth || '100%',
+                boxSizing: 'border-box'
+            }}
+        >
+            {options?.map((option, index) => (
+                <option key={index} value={option}>
+                    {option}
+                </option>
+            ))}
+        </select>
     );
 };
 
@@ -59,8 +111,7 @@ const CheckboxCell = ({ value, onChange, isEditing, isReadOnly }) => {
     if (!isEditing || isReadOnly) {
         // View mode OR read-only: centered icon with border placeholder
         return (
-            <div
-                className="d-flex align-items-center justify-content-center px-3 py-2"
+            <div className="d-flex align-items-center justify-content-start px-3 py-2"
                 style={{ border: '1px solid transparent' }} // Match edit mode layout
             >
                 {value ? (
@@ -74,8 +125,7 @@ const CheckboxCell = ({ value, onChange, isEditing, isReadOnly }) => {
 
     // Edit mode and editable: show checkbox with consistent layout
     return (
-        <div
-            className="d-flex align-items-center justify-content-center px-3 py-2"
+        <div className="d-flex align-items-center justify-content-start px-3 py-2"
             style={{ border: '1px solid transparent' }} // Visible border
         >
             <input
@@ -88,45 +138,7 @@ const CheckboxCell = ({ value, onChange, isEditing, isReadOnly }) => {
         </div>
     );
 };
-const SelectCell = ({ value, options, onChange, isEditing, isReadOnly }) => {
-    const displayValue = options?.includes(value) ? value : <span className="text-muted">—</span>;
 
-    if (!isEditing || isReadOnly) {
-        // View mode OR read-only: display value only with border placeholder
-        return (
-            <div
-                className="px-3 py-2"
-                style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    border: '1px solid transparent' // Prevent layout shift
-                }}
-            >
-                {displayValue}
-            </div>
-        );
-    }
-
-    // Edit mode and editable: show select dropdown with explicit border
-    return (
-        <select
-            className="form-select form-select-sm px-3 py-2"
-            value={value || ''}
-            onChange={onChange}
-            style={{
-                ...styles.enabled,
-                border: '1px solid var(--bs-border-color)'
-            }}
-        >
-            {options?.map((option, index) => (
-                <option key={index} value={option}>
-                    {option}
-                </option>
-            ))}
-        </select>
-    );
-};
 export const Cell = ({ row, header, table }) => {
     const { handleChange } = table;
     const isReadOnly = !!header.readOnly;
@@ -138,23 +150,31 @@ export const Cell = ({ row, header, table }) => {
         handleChange(row.id, header.field, value);
     };
 
+    // Common cell style that respects the header width
+    const cellStyle = {
+        maxWidth: header.width || "auto",
+        width: header.width || "auto", // Add explicit width as well
+        overflow: "hidden"
+    };
+
     switch (header.type) {
         case "text":
             return (
-                <td>
+                <td style={cellStyle}>
                     <TextCell
                         value={row[header.field]}
                         onChange={handleCellChange}
                         isEditing={isEditing}
                         id={row.id}
                         isReadOnly={isReadOnly}
+                        width={header.width} // Pass width to TextCell
                     />
                 </td>
             );
 
         case "checkbox":
             return (
-                <td>
+                <td style={cellStyle}>
                     <CheckboxCell
                         value={row[header.field]}
                         onChange={handleCellChange}
@@ -166,25 +186,34 @@ export const Cell = ({ row, header, table }) => {
 
         case "select":
             return (
-                <td>
+                <td style={cellStyle}>
                     <SelectCell
                         value={row[header.field]}
                         options={header.options}
                         onChange={handleCellChange}
                         isEditing={isEditing}
                         isReadOnly={isReadOnly}
+                        width={header.width} // Pass width to SelectCell
                     />
                 </td>
             );
 
         default:
             return (
-                <td className="px-3 py-2" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <td
+                    className="px-3 py-2"
+                    style={{
+                        ...cellStyle,
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis"
+                    }}
+                >
                     {row[header.field] || <span className="text-muted">—</span>}
                 </td>
             );
     }
 };
+
 
 export const Row = ({ row, headers, tableModel }) => {
     const handleSave = async () => {
@@ -221,7 +250,9 @@ export const Row = ({ row, headers, tableModel }) => {
                 style={{
                     width: 'min-content',
                     whiteSpace: 'nowrap',
-                    padding: '0.25rem 0.5rem'
+                    padding: '0.25rem 0.5rem',
+                    position: 'relative', // 👈 Ensure relative for absolute children
+                    overflow: 'visible'   // 👈 Prevent clipping
                 }}
             >
                 <div className="dropdown d-inline-block">
@@ -241,6 +272,15 @@ export const Row = ({ row, headers, tableModel }) => {
                     <ul
                         className="dropdown-menu dropdown-menu-end"
                         aria-labelledby={`dropdownMenuButton-${row.id}`}
+                        data-bs-popper="none"
+                        style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: 0,
+                            zIndex: 1060,
+                            overflow: 'auto',
+                            maxHeight: '300px'
+                        }}
                     >
                         {row.isEditing ? (
                             <>
@@ -254,7 +294,7 @@ export const Row = ({ row, headers, tableModel }) => {
                                         <i className="fas fa-times me-2"></i> Cancel
                                     </button>
                                 </li>
-                                {tableModel.customActions
+                                {tableModel.customRowActions
                                     .filter((action) => action.isEditAction)
                                     .map((action, index) => (
                                         <li key={`edit-action-${index}`}>
@@ -290,7 +330,7 @@ export const Row = ({ row, headers, tableModel }) => {
                                         <i className="fas fa-trash me-2"></i> Delete
                                     </button>
                                 </li>
-                                {tableModel.customActions
+                                {tableModel.customRowActions
                                     .filter((action) => !action.isEditAction)
                                     .map((action, index) => (
                                         <li key={`action-${index}`}>
@@ -364,7 +404,7 @@ export const Table = ({ tableModel, title }) => {
             )}
 
             <div className="card-body">
-                <div className="table-responsive">
+                <div className="table-responsive" style={{ overflow: "visible" }}>
                     <table
                         className="table table-striped table-hover mb-0"
                         style={{
@@ -376,14 +416,20 @@ export const Table = ({ tableModel, title }) => {
                             <tr>
                                 {tableModel.headers.map((header, index) => {
                                     const isSortable = header.sortable !== false;
+                                    const sortOrder = tableModel.getSortOrder(header.field);
+
                                     const sortIcon = () => {
-                                        if (!tableModel.sort || tableModel.sort.field !== header.field) return null;
-                                        return tableModel.sort.order === 'asc' ? ' ▲' : ' ▼';
+                                        if (sortOrder === null) return null;
+                                        return sortOrder === 'asc' ? ' ▲' : ' ▼';
                                     };
+
                                     return (
                                         <th
                                             key={index}
+                                            className="px-3 py-2"
                                             style={{
+                                                width: header.width || "auto",
+                                                maxWidth: header.width || "auto",
                                                 cursor: isSortable ? "pointer" : "default",
                                                 position: "relative",
                                                 whiteSpace: "nowrap",
@@ -401,6 +447,7 @@ export const Table = ({ tableModel, title }) => {
                                     );
                                 })}
                                 <th
+                                    className="px-3"
                                     style={{
                                         width: 'min-content',
                                         whiteSpace: 'nowrap',
@@ -523,7 +570,7 @@ export const Table = ({ tableModel, title }) => {
                             <i className="fas fa-plus"></i> Add
                         </button>
 
-                        {tableModel.customButtons.map((btn, index) => (
+                        {tableModel.customTableActions.map((btn, index) => (
                             <button
                                 key={`table-btn-${index}`}
                                 className={`btn ${btn.variant || 'btn-outline-secondary'}`}

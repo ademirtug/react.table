@@ -4,8 +4,8 @@ import ToastManager from "../utils/toastManager";
 
 export function useBaseTable({
     headers = [],
-    customActions = [],
-    customButtons = [],
+    customRowActions = [],
+    customTableActions = [],
     fetchDataFn,
     addRowFn,
     updateRowFn,
@@ -23,14 +23,23 @@ export function useBaseTable({
     });
     const [nextId, setNextId] = useState(1);
 
-    const [sort, setSort] = useState({
-        field: null,
-        order: null // 'asc' | 'desc' | null
+    // Multi-column sort state - array of {field, order}
+    const [sort, setSort] = useState(() => {
+        // Initialize with default sorts from headers
+        const defaultSorts = headers
+            .filter(header => header.defaultSort)
+            .map(header => ({
+                field: header.field,
+                order: typeof header.defaultSort === 'string'
+                    ? header.defaultSort
+                    : 'asc'
+            }));
+        return defaultSorts;
     });
 
     useEffect(() => {
         if (autoFetch && fetchDataFn) {
-            fetchData(1, pagination.limit);
+            fetchData(1, pagination.limit, sort);
         }
     }, []);
 
@@ -38,14 +47,17 @@ export function useBaseTable({
     const fetchData = async (
         page = pagination.page,
         limit = pagination.limit,
-        sortField = sort.field,
-        sortOrder = sort.order
+        sortCriteria = sort
     ) => {
         if (!fetchDataFn) return;
         setLoading(true);
         try {
+            // Extract fields and orders from sort criteria
+            const sortFields = sortCriteria.map(s => s.field);
+            const sortOrders = sortCriteria.map(s => s.order);
+
             const { page: p, limit: l, total, lastPage, items } =
-                await fetchDataFn(page, limit, sortField, sortOrder);
+                await fetchDataFn(page, limit, sortFields, sortOrders);
             setPagination({ page: p, limit: l, total, lastPage });
             setTableData(items);
         } catch (error) {
@@ -58,7 +70,7 @@ export function useBaseTable({
 
     const goToPage = (page) => {
         const validPage = Math.max(1, Math.min(page, pagination.lastPage));
-        fetchData(validPage, pagination.limit);
+        fetchData(validPage, pagination.limit, sort);
     };
 
     const setLimit = (newLimit) => {
@@ -66,7 +78,54 @@ export function useBaseTable({
         const safeLimit = validLimits.includes(newLimit) ? newLimit : 10;
         const newLastPage = Math.max(1, Math.ceil(pagination.total / safeLimit));
         const targetPage = Math.min(pagination.page, newLastPage);
-        fetchData(targetPage, safeLimit);
+        fetchData(targetPage, safeLimit, sort);
+    };
+
+    /** Multi-Column Sorting **/
+    const setSortField = (field) => {
+        setSort(prev => {
+            const existingIndex = prev.findIndex(s => s.field === field);
+            let newSorts;
+
+            if (existingIndex >= 0) {
+                // Column already has a sort - cycle through states
+                const existingSort = prev[existingIndex];
+                let newOrder;
+
+                if (existingSort.order === 'asc') newOrder = 'desc';
+                else if (existingSort.order === 'desc') newOrder = null;
+                else newOrder = 'asc';
+
+                if (newOrder === null) {
+                    // Remove this sort
+                    newSorts = prev.filter(s => s.field !== field);
+                } else {
+                    // Update this sort
+                    newSorts = [...prev];
+                    newSorts[existingIndex] = { field, order: newOrder };
+                }
+            } else {
+                // New column sort - add as highest priority
+                newSorts = [...prev, { field, order: 'asc' }]
+            }
+
+            // Filter out null sorts
+            newSorts = newSorts.filter(s => s.order !== null);
+
+            fetchData(pagination.page, pagination.limit, newSorts);
+            return newSorts;
+        });
+    };
+
+    const clearAllSorts = () => {
+        const clearedSorts = [];
+        fetchData(pagination.page, pagination.limit, clearedSorts);
+        setSort(clearedSorts);
+    };
+
+    const getSortOrder = (field) => {
+        const sortEntry = sort.find(s => s.field === field);
+        return sortEntry ? sortEntry.order : null;
     };
 
     /** Row Operations **/
@@ -103,7 +162,7 @@ export function useBaseTable({
 
         const response = await fn(row);
         if (response.ok) {
-            fetchData();
+            fetchData(pagination.page, pagination.limit, sort); // Add sort parameter
         }
         return response;
     };
@@ -112,38 +171,27 @@ export function useBaseTable({
         if (!deleteRowFn) return { ok: false, message: "No handler provided" };
         const response = await deleteRowFn(id);
         if (response.ok) {
-            fetchData();
+            fetchData(pagination.page, pagination.limit, sort); // Add sort parameter
         }
         return response;
     };
 
-    const setSortField = (field) => {
-        setSort(prev => {
-            let newOrder = 'asc';
-            if (prev.field === field) {
-                if (prev.order === 'asc') newOrder = 'desc';
-                else if (prev.order === 'desc') newOrder = null;
-                else newOrder = 'asc';
-            }
-
-            // If order becomes null, don't refetch (no sort)
-            if (newOrder === null) {
-                fetchData(pagination.page, pagination.limit, null, null);
-                return { field: null, order: null };
-            }
-
-            fetchData(pagination.page, pagination.limit, field, newOrder);
-            return { field, order: newOrder };
-        });
-    };
-
     const toggleEditMode = (id) => {
-        setTableData(prev =>
-            prev.map(row => ({
-                ...row,
-                isEditing: row.id === id ? !row.isEditing : false
-            }))
-        );
+        setTableData(prev => {
+            const row = prev.find(r => r.id === id);
+            if (!row) return prev;
+
+            // If it's a new row and we're turning OFF edit mode (i.e., canceling)
+            if (row.isNew && row.isEditing) {
+                return prev.filter(r => r.id !== id);
+            }
+
+            // Otherwise: just toggle isEditing (and ensure only one row is editing)
+            return prev.map(r => ({
+                ...r,
+                isEditing: r.id === id ? !r.isEditing : false
+            }));
+        });
     };
 
     return {
@@ -151,8 +199,8 @@ export function useBaseTable({
         loading,
         pagination,
         headers,
-        customActions,
-        customButtons,
+        customRowActions,
+        customTableActions,
         setTableData,
         fetchData,
         goToPage,
@@ -162,6 +210,8 @@ export function useBaseTable({
         saveRow,
         deleteRow,
         setSortField,
+        clearAllSorts,
+        getSortOrder,
         sort,
         toggleEditMode,
         ...(extraMethods || {}),
