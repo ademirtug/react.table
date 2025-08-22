@@ -115,9 +115,9 @@ const CheckboxCell = ({ value, onChange, isEditing, isReadOnly }) => {
                 style={{ border: '1px solid transparent' }} // Match edit mode layout
             >
                 {value ? (
-                    <i className="fas fa-check text-success"></i>
+                    <i className="material-symbols-rounded">success</i>
                 ) : (
-                    <i className="fas fa-times text-secondary"></i>
+                        <i className="material-symbols-rounded text-secondary">close</i>
                 )}
             </div>
         );
@@ -251,13 +251,14 @@ export const Row = ({ row, headers, tableModel }) => {
                     width: 'min-content',
                     whiteSpace: 'nowrap',
                     padding: '0.25rem 0.5rem',
-                    position: 'relative', // 👈 Ensure relative for absolute children
-                    overflow: 'visible'   // 👈 Prevent clipping
+                    position: 'relative',
+                    overflow: 'visible'
                 }}
             >
                 <div className="dropdown d-inline-block">
+                    {/* Dropdown Toggle Button */}
                     <button
-                        className="btn btn-sm btn-outline-secondary border-0"
+                        className="btn btn-sm btn-outline-secondary border-0 d-flex align-items-center justify-content-center"
                         type="button"
                         id={`dropdownMenuButton-${row.id}`}
                         data-bs-toggle="dropdown"
@@ -267,8 +268,12 @@ export const Row = ({ row, headers, tableModel }) => {
                             minWidth: 0
                         }}
                     >
-                        <i className="fas fa-ellipsis" style={{ fontSize: '1.25rem' }}></i>
+                        <i className="material-symbols-rounded" style={{ fontSize: '1.25rem', margin: 0 }}>
+                            more_vert
+                        </i>
                     </button>
+
+                    {/* Dropdown Menu */}
                     <ul
                         className="dropdown-menu dropdown-menu-end"
                         aria-labelledby={`dropdownMenuButton-${row.id}`}
@@ -285,13 +290,15 @@ export const Row = ({ row, headers, tableModel }) => {
                         {row.isEditing ? (
                             <>
                                 <li>
-                                    <button className="dropdown-item" onClick={handleSave}>
-                                        <i className="fas fa-check me-2"></i> Save
+                                    <button className="dropdown-item d-flex align-items-center" onClick={handleSave}>
+                                        <i className="material-symbols-rounded me-2">check</i>
+                                        Save
                                     </button>
                                 </li>
                                 <li>
-                                    <button className="dropdown-item" onClick={handleCancel}>
-                                        <i className="fas fa-times me-2"></i> Cancel
+                                    <button className="dropdown-item d-flex align-items-center" onClick={handleCancel}>
+                                        <i className="material-symbols-rounded me-2">close</i>
+                                        Cancel
                                     </button>
                                 </li>
                                 {tableModel.customRowActions
@@ -299,12 +306,10 @@ export const Row = ({ row, headers, tableModel }) => {
                                     .map((action, index) => (
                                         <li key={`edit-action-${index}`}>
                                             <button
-                                                className="dropdown-item"
-                                                onClick={() =>
-                                                    action.onClick(row, tableModel)
-                                                }
+                                                className="dropdown-item d-flex align-items-center"
+                                                onClick={() => action.onClick(row, tableModel)}
                                             >
-                                                <i className={`${action.icon} me-2`}></i>
+                                                <i className="material-symbols-rounded me-2">{action.icon}</i>
                                                 {action.title}
                                             </button>
                                         </li>
@@ -314,20 +319,20 @@ export const Row = ({ row, headers, tableModel }) => {
                             <>
                                 <li>
                                     <button
-                                        className="dropdown-item"
-                                        onClick={() =>
-                                            tableModel.toggleEditMode(row.id)
-                                        }
+                                        className="dropdown-item d-flex align-items-center"
+                                        onClick={() => tableModel.toggleEditMode(row.id)}
                                     >
-                                        <i className="fas fa-edit me-2"></i> Edit
+                                        <i className="material-symbols-rounded me-2">edit</i>
+                                        Edit
                                     </button>
                                 </li>
                                 <li>
                                     <button
-                                        className="dropdown-item"
+                                        className="dropdown-item d-flex align-items-center"
                                         onClick={handleDelete}
                                     >
-                                        <i className="fas fa-trash me-2"></i> Delete
+                                        <i className="material-symbols-rounded me-2">delete</i>
+                                        Delete
                                     </button>
                                 </li>
                                 {tableModel.customRowActions
@@ -335,12 +340,10 @@ export const Row = ({ row, headers, tableModel }) => {
                                     .map((action, index) => (
                                         <li key={`action-${index}`}>
                                             <button
-                                                className="dropdown-item"
-                                                onClick={() =>
-                                                    action.onClick(row, tableModel)
-                                                }
+                                                className="dropdown-item d-flex align-items-center"
+                                                onClick={() => action.onClick(row, tableModel)}
                                             >
-                                                <i className={`${action.icon} me-2`}></i>
+                                                <i className="material-symbols-rounded me-2">{action.icon}</i>
                                                 {action.title}
                                             </button>
                                         </li>
@@ -353,7 +356,6 @@ export const Row = ({ row, headers, tableModel }) => {
         </tr>
     );
 };
-
 
 export const Table = ({ tableModel, title }) => {
     const { page, limit, total, lastPage } = tableModel.pagination;
@@ -562,24 +564,24 @@ export const Table = ({ tableModel, title }) => {
 
                     <div className="d-flex flex-wrap gap-2">
                         <button
-                            className="btn btn-outline-secondary "
+                            className="btn btn-outline-secondary d-flex align-items-center"
                             onClick={handleAddNewRow}
                             disabled={tableModel.loading}
                             title="Add new item"
                         >
-                            <i className="fas fa-plus"></i> Add
+                            <i className="material-symbols-rounded">add</i>
                         </button>
 
                         {tableModel.customTableActions.map((btn, index) => (
                             <button
                                 key={`table-btn-${index}`}
-                                className={`btn ${btn.variant || 'btn-outline-secondary'}`}
+                                className={`btn ${btn.variant || 'btn-outline-secondary d-flex align-items-center'}`}
                                 onClick={() => btn.onClick(tableModel)}
                                 title={btn.title}
                                 disabled={btn.disabled || tableModel.loading}
                                 style={{ whiteSpace: 'nowrap', ...btn.style }}
                             >
-                                <i className={`${btn.icon} me-1`}></i>
+                                <i className="material-symbols-rounded">{btn.icon}</i>
                                 {btn.label}
                             </button>
                         ))}

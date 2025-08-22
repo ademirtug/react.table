@@ -4,8 +4,8 @@ import { useBaseTable } from "./useBaseTable";
 export function useLocalTable({
     localStorageKey,
     headers = [],
-    customActions = [],
-    customButtons = [],
+    customRowActions = [],
+    customTableActions = [],
     initialData = null,
     extraMethods = {}
 }) {
@@ -147,8 +147,8 @@ export function useLocalTable({
 
     return useBaseTable({
         headers,
-        customActions,
-        customButtons,
+        customRowActions,
+        customTableActions,
         fetchDataFn,
         addRowFn,
         updateRowFn,
